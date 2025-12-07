@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const date = new Date(startDate.getTime());
         const dates = [];
 
-        while (date < endDate) {
+        while (date <= endDate) {
             // Use local YYYY-MM-DD construction to avoid timezone shifts
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -128,7 +128,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             bookedDates = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                if (data.checkinDateISO && data.checkoutDateISO) {
+                // Filter: Only show Confirmed or Admin Block
+                if ((data.status === 'confirmed' || data.name === 'Admin Block') && data.checkinDateISO && data.checkoutDateISO) {
                     const start = new Date(data.checkinDateISO);
                     const end = new Date(data.checkoutDateISO);
                     bookedDates.push(...getDatesInRange(start, end));
@@ -355,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- FIREBASE: Add to Firestore ---
         try {
             await addDoc(collection(db, "bookings"), {
-                bookingRef: currentBookingRef, // variables stored from summary update
+                bookingRef: currentBookingRef || `REF-${Date.now()}`, // Fallback if empty
                 name: document.getElementById('guestName').value,
                 email: document.getElementById('guestEmail').value,
                 phone: document.getElementById('guestPhone').value,
@@ -366,6 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 price: `${calculatedTotal} €`,
                 apartment: apartmentSelect.value,
                 guests: guestCountInput.value,
+                status: 'pending', // FORCE PENDING
                 timestamp: new Date().toISOString()
             });
 

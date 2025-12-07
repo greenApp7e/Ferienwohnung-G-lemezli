@@ -17,6 +17,25 @@ const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+    /* --- Theme Toggle (Dark/Light) --- */
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    // Check local storage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+        body.classList.add('dark-mode');
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
+        });
+    }
+
     /* --- Mobile Navigation --- */
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const navLinks = document.querySelector('.nav-links');

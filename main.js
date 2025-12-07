@@ -90,8 +90,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     function getDatesInRange(startDate, endDate) {
         const date = new Date(startDate.getTime());
         const dates = [];
+
         while (date < endDate) {
-            dates.push(date.toISOString().split('T')[0]);
+            // Use local YYYY-MM-DD construction to avoid timezone shifts
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            dates.push(`${y}-${m}-${d}`);
+
             date.setDate(date.getDate() + 1);
         }
         return dates;

@@ -80,7 +80,7 @@
     <div id="loginSection" class="login-form admin-container">
         <h2>Admin Login</h2>
         <div class="form-group">
-            <input type="text" id="username" placeholder="Benutzername"
+            <input type="text" id="username" placeholder="E-Mail (Admin-Konto)"
                 style="width: 100%; padding: 10px; margin-bottom: 10px;">
             <input type="password" id="password" placeholder="Passwort"
                 style="width: 100%; padding: 10px; margin-bottom: 20px;">
@@ -131,6 +131,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, deleteDoc, updateDoc, doc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDB9AZS4_TLNwYERDqnRff0Qv-CMV0D-UQ",
@@ -143,35 +144,65 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        // Security
-        const correctUser = "Bozkurt96";
-        const correctPass = "Bcbwug4live.2020.";
-
+        // State
         let allBookings = [];
-        let bookedDateStrings = []; // confirmed
-        let pendingDateStrings = []; // pending
+        let bookedDateStrings = [];
+        let pendingDateStrings = [];
         let currentDate = new Date();
+        let unsubscribe = null; // To stop listener on logout
 
-        document.getElementById('loginBtn').addEventListener('click', checkLogin);
-        document.getElementById('logoutBtn').addEventListener('click', () => location.reload());
-        document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(currentDate); });
-        document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(currentDate); });
-
-        function checkLogin() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
-            if (u === correctUser && p === correctPass) {
+        // Auth Listener - Checks if user is logged in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
                 initRealtimeListener();
             } else {
-                document.getElementById('loginError').style.display = 'block';
+                // User is signed out
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+                if (unsubscribe) unsubscribe();
             }
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', loginWithFirebase);
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                alert("Erfolgreich abgemeldet!");
+            }).catch((error) => {
+                console.error(error);
+            });
+        });
+
+        document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(currentDate); });
+        document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(currentDate); });
+
+        function loginWithFirebase() {
+            const email = document.getElementById('username').value; // Input field ID reused (is actually email now)
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('loginError');
+
+            errorMsg.style.display = 'none';
+
+            signInWithEmailAndPassword(auth, email, pass)
+                .then((userCredential) => {
+                    // Signed in via Listener above
+                    console.log("Login User:", userCredential.user.email);
+                })
+                .catch((error) => {
+                    console.error("Login Failed:", error.code, error.message);
+                    errorMsg.textContent = "Fehler: E-Mail oder Passwort falsch!";
+                    errorMsg.style.display = 'block';
+                });
         }
 
         function initRealtimeListener() {
-            onSnapshot(collection(db, "bookings"), (snapshot) => {
+            // Security: Rules will reject this if auth is missing
+            unsubscribe = onSnapshot(collection(db, "bookings"), (snapshot) => {
                 allBookings = [];
                 bookedDateStrings = [];
                 pendingDateStrings = [];
@@ -186,7 +217,7 @@
                         const end = new Date(data.checkoutDateISO);
 
                         let loopDate = new Date(start);
-                        while (loopDate < end) {
+                        while (loopDate <= end) {
                             // Local YMD Fix
                             const y = loopDate.getFullYear();
                             const m = String(loopDate.getMonth() + 1).padStart(2, '0');
@@ -196,7 +227,6 @@
                             if (data.status === 'pending') {
                                 pendingDateStrings.push(dateStr);
                             } else {
-                                // Confirmed or undefined (legacy) or Admin Block
                                 bookedDateStrings.push(dateStr);
                             }
 
@@ -208,6 +238,11 @@
                 allBookings.sort((a, b) => new Date(b.checkinDateISO) - new Date(a.checkinDateISO));
                 renderBookingsTable();
                 renderCalendar(currentDate);
+            }, (error) => {
+                console.error("Datenbank Zugriff verweigert:", error);
+                if (error.code === 'permission-denied') {
+                    alert("Sicherheitswarnung: Zugriff verweigert. Bitte neu einloggen.");
+                }
             });
         }
 
@@ -258,7 +293,7 @@
                 // Listeners
                 setTimeout(() => {
                     const btnDel = document.getElementById(`btn-del-${b.id}`);
-                    if (btnDel) btnDel.onclick = () => deleteBooking(b.id, b.status === 'pending'); // Pass true if ignoring confirm check? No, standardize.
+                    if (btnDel) btnDel.onclick = () => deleteBooking(b.id, b.status === 'pending');
 
                     const btnConf = document.getElementById(`btn-conf-${b.id}`);
                     if (btnConf) btnConf.onclick = () => confirmBooking(b.id);
@@ -330,6 +365,11 @@
         }
 
         window.toggleDate = async function (dateStr, isPending) {
+            if (!auth.currentUser) {
+                alert("Nicht eingeloggt!");
+                return;
+            }
+
             const foundBooking = allBookings.find(b => {
                 if (b.checkinDateISO && b.checkoutDateISO) {
                     const start = new Date(b.checkinDateISO);

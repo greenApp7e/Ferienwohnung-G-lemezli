@@ -50,10 +50,9 @@
             cursor: pointer;
         }
 
-        .calendar-day.selected-block {
-            background-color: #e74c3c;
-            color: white;
-            border: 2px solid #c0392b;
+        .calendar-day.booked {
+            background-color: #e74c3c !important;
+            color: white !important;
         }
     </style>
 </head>
@@ -68,7 +67,7 @@
                 style="width: 100%; padding: 10px; margin-bottom: 10px;">
             <input type="password" id="password" placeholder="Passwort"
                 style="width: 100%; padding: 10px; margin-bottom: 20px;">
-            <button onclick="checkLogin()" class="btn-primary" style="width: 100%;">Einloggen</button>
+            <button id="loginBtn" class="btn-primary" style="width: 100%;">Einloggen</button>
         </div>
         <p id="loginError" style="color: red; display: none;">Falsche Zugangsdaten!</p>
     </div>
@@ -77,10 +76,10 @@
     <div id="dashboardSection" class="hidden admin-container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
             <h2>Verwaltungskalender</h2>
-            <button onclick="logout()" class="btn-primary" style="background-color: #7f8c8d;">Abmelden</button>
+            <button id="logoutBtn" class="btn-primary" style="background-color: #7f8c8d;">Abmelden</button>
         </div>
 
-        <p>Klicken Sie auf Tage, um sie zu <strong>blockieren</strong> oder <strong>freizugeben</strong>.</p>
+        <p>Übersicht aller Buchungen und blockierten Zeiträume.</p>
 
         <div class="calendar-wrapper">
             <div class="calendar-header">
@@ -94,41 +93,55 @@
         </div>
 
         <div style="margin-top: 40px;">
-            <h3>Eingegangene Buchungen (Lokal)</h3>
+            <h3>Alle Buchungen (Live aus Datenbank)</h3>
             <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
                 <thead>
                     <tr style="background:#eee; text-align:left;">
-                        <th style="padding:10px;">Datum</th>
+                        <th style="padding:10px;">Check-In</th>
                         <th style="padding:10px;">Gast</th>
-                        <th style="padding:10px;">Wohnung</th>
+                        <th style="padding:10px;">Details</th>
                         <th style="padding:10px;">Zeitraum</th>
-                        <th style="padding:10px;">Preis</th>
                         <th style="padding:10px;">Aktion</th>
                     </tr>
                 </thead>
                 <tbody id="bookingTableBody">
-                    <!-- JS generated -->
+                    <tr>
+                        <td colspan="5" style="padding:20px; text-align:center;">Lade Daten...</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-
-        <div style="margin-top: 20px; text-align: right;">
-            <button onclick="saveChanges()" class="btn-success">Kalender-Änderungen speichern</button>
-        </div>
     </div>
 
-    <script>
-        // Use the shared main logic structure
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, deleteDoc, doc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB9AZS4_TLNwYERDqnRff0Qv-CMV0D-UQ",
+            authDomain: "ferienwohnung-d31ec.firebaseapp.com",
+            projectId: "ferienwohnung-d31ec",
+            storageBucket: "ferienwohnung-d31ec.firebasestorage.app",
+            messagingSenderId: "979312887124",
+            appId: "1:979312887124:web:76ff37c6590389aa29f4c1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Security
         const correctUser = "Bozkurt96";
         const correctPass = "Bcbwug4live.2020.";
 
-        let bookedDates = JSON.parse(localStorage.getItem('bookedDates')) || [
-            "2025-12-10", "2025-12-11", "2025-12-12",
-            "2025-12-24", "2025-12-25", "2025-12-26",
-            "2026-01-01"
-        ];
-
+        // State
+        let allBookings = [];
+        let bookedDateStrings = []; // YYYY-MM-DD
         let currentDate = new Date();
+
+        document.getElementById('loginBtn').addEventListener('click', checkLogin);
+        document.getElementById('logoutBtn').addEventListener('click', () => location.reload()); // Simple logout
+        document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(currentDate); });
+        document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(currentDate); });
 
         function checkLogin() {
             const u = document.getElementById('username').value;
@@ -136,23 +149,94 @@
             if (u === correctUser && p === correctPass) {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
-                renderCalendar(currentDate);
-                renderBookings();
+                initRealtimeListener();
             } else {
                 document.getElementById('loginError').style.display = 'block';
             }
         }
 
-        function logout() {
-            location.reload();
+        // --- FIREBASE REALTIME LISTENER ---
+        function initRealtimeListener() {
+            const unsub = onSnapshot(collection(db, "bookings"), (snapshot) => {
+                allBookings = [];
+                bookedDateStrings = [];
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    allBookings.push({ id: doc.id, ...data });
+
+                    // Calculate blocked dates for calendar
+                    if (data.checkinDateISO && data.checkoutDateISO) {
+                        const start = new Date(data.checkinDateISO);
+                        const end = new Date(data.checkoutDateISO);
+                        // Helper function inside loop (or moved out)
+                        let loopDate = new Date(start);
+                        while (loopDate < end) {
+                            bookedDateStrings.push(loopDate.toISOString().split('T')[0]);
+                            loopDate.setDate(loopDate.getDate() + 1);
+                        }
+                    }
+                });
+
+                // Sort by checkin date (newest first or coming first?)
+                allBookings.sort((a, b) => new Date(b.checkinDateISO) - new Date(a.checkinDateISO));
+
+                renderBookingsTable();
+                renderCalendar(currentDate);
+            });
         }
 
-        /* Simplified Calendar Logic for Admin */
-        const calendarGrid = document.getElementById('calendarGrid');
-        const currentMonthYear = document.getElementById('currentMonthYear');
+        function renderBookingsTable() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = '';
+
+            if (allBookings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center;">Keine Buchungen vorhanden.</td></tr>';
+                return;
+            }
+
+            allBookings.forEach((b) => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #ddd";
+
+                // Format Date safely
+                let dateDisplay = b.checkin || "Unbekannt";
+
+                tr.innerHTML = `
+                    <td style="padding:10px;">${dateDisplay}</td>
+                    <td style="padding:10px;"><strong>${b.name || 'Admin Block'}</strong><br><small>${b.phone || ''}</small></td>
+                    <td style="padding:10px;">Whg ${b.apartment || '-'} (${b.guests || 0} Pers.)</td>
+                    <td style="padding:10px;">${b.checkin} - ${b.checkout}</td>
+                    <td style="padding:10px;">
+                        <button class="btn-danger" style="padding:5px 10px; font-size:0.8rem;" id="btn-delete-${b.id}">Löschen</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                // Add Event Listener for Delete (Closure safe)
+                setTimeout(() => {
+                    const btn = document.getElementById(`btn-delete-${b.id}`);
+                    if (btn) btn.onclick = () => deleteBooking(b.id);
+                }, 0);
+            });
+        }
+
+        async function deleteBooking(docId) {
+            if (confirm('Möchten Sie diese Buchung wirklich unwiderruflich löschen?')) {
+                try {
+                    await deleteDoc(doc(db, "bookings", docId));
+                    // Table updates automatically via snapshot listener!
+                } catch (e) {
+                    alert("Fehler beim Löschen: " + e.message);
+                }
+            }
+        }
 
         function renderCalendar(date) {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const currentMonthYear = document.getElementById('currentMonthYear');
             calendarGrid.innerHTML = '';
+
             const year = date.getFullYear();
             const month = date.getMonth();
             const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -178,76 +262,19 @@
                 const dayEl = document.createElement('div');
                 dayEl.classList.add('calendar-day');
                 dayEl.textContent = i;
+
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
 
-                if (bookedDates.includes(dateStr)) {
-                    dayEl.classList.add('booked'); // Visual style from style.css
-                    dayEl.style.backgroundColor = '#e74c3c'; // Force red
-                    dayEl.style.color = 'white';
+                if (bookedDateStrings.includes(dateStr)) {
+                    dayEl.classList.add('booked');
                 }
 
-                dayEl.onclick = () => toggleDate(dateStr, dayEl);
+                // Optional: Admin click to block functionality could be added here
+                // dayEl.onclick = () => adminBlockDate(dateStr); 
+
                 calendarGrid.appendChild(dayEl);
             }
         }
-
-        function toggleDate(dateStr, el) {
-            if (bookedDates.includes(dateStr)) {
-                // Remove
-                bookedDates = bookedDates.filter(d => d !== dateStr);
-                el.classList.remove('booked');
-                el.style.backgroundColor = '';
-                el.style.color = '';
-            } else {
-                // Add
-                bookedDates.push(dateStr);
-                el.classList.add('booked');
-                el.style.backgroundColor = '#e74c3c';
-                el.style.color = 'white';
-            }
-        }
-
-        function saveChanges() {
-            localStorage.setItem('bookedDates', JSON.stringify(bookedDates));
-            alert('Änderungen für DIESES GERÄT gespeichert! (Test-Modus)');
-        }
-
-        function renderBookings() {
-            const bookings = JSON.parse(localStorage.getItem('adminBookings')) || [];
-            const tbody = document.getElementById('bookingTableBody');
-            tbody.innerHTML = '';
-
-            if (bookings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center;">Keine Buchungen vorhanden.</td></tr>';
-                return;
-            }
-
-            bookings.reverse().forEach((b, index) => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #ddd";
-                tr.innerHTML = `
-                    <td style="padding:10px;">${new Date(b.date).toLocaleDateString()}</td>
-                    <td style="padding:10px;"><strong>${b.name}</strong><br><small>${b.phone}</small></td>
-                    <td style="padding:10px;">Whg ${b.apartment} (${b.guests} Pers.)</td>
-                    <td style="padding:10px;">${b.checkin} - ${b.checkout}</td>
-                    <td style="padding:10px; font-weight:bold;">${b.price}</td>
-                    <td style="padding:10px;"><button class="btn-danger" style="padding:5px 10px; font-size:0.8rem;" onclick="deleteBooking(${index})">Löschen</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function deleteBooking(index) {
-            if (confirm('Buchung wirklich löschen?')) {
-                const bookings = JSON.parse(localStorage.getItem('adminBookings')) || [];
-                bookings.splice(bookings.length - 1 - index, 1); // Adjust index for reversed array
-                localStorage.setItem('adminBookings', JSON.stringify(bookings));
-                renderBookings();
-            }
-        }
-
-        document.getElementById('prevMonth').onclick = () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(currentDate); };
-        document.getElementById('nextMonth').onclick = () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(currentDate); };
 
     </script>
 </body>

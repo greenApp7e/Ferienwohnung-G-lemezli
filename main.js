@@ -1,4 +1,21 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyDB9AZS4_TLNwYERDqnRff0Qv-CMV0D-UQ",
+    authDomain: "ferienwohnung-d31ec.firebaseapp.com",
+    projectId: "ferienwohnung-d31ec",
+    storageBucket: "ferienwohnung-d31ec.firebasestorage.app",
+    messagingSenderId: "979312887124",
+    appId: "1:979312887124:web:76ff37c6590389aa29f4c1"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+document.addEventListener('DOMContentLoaded', async () => {
 
     /* --- Mobile Navigation --- */
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
@@ -7,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileToggle) {
         mobileToggle.addEventListener('click', () => {
             navLinks.classList.toggle('active');
-            // Toggle hamburger animation
             mobileToggle.classList.toggle('open');
         });
     }
@@ -20,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetElement = document.querySelector(targetId);
 
             if (targetElement) {
-                // Close mobile menu if open
                 if (navLinks.classList.contains('active')) {
                     navLinks.classList.remove('active');
                     mobileToggle.classList.remove('open');
@@ -64,13 +79,57 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedEndDate = null;
     const pricePerPerson = 45; // Preis pro Person in Euro
 
-    // Dummy Data for booked dates (YYYY-MM-DD)
-    // Load booked dates from LocalStorage (Sync with Admin) or use default
-    const bookedDates = JSON.parse(localStorage.getItem('bookedDates')) || [
-        "2025-12-10", "2025-12-11", "2025-12-12",
-        "2025-12-24", "2025-12-25", "2025-12-26",
-        "2026-01-01"
-    ];
+    // --- FIREBASE: Fetch Booked Dates ---
+    let bookedDates = [];
+
+    // Helper to get dates range
+    function getDatesInRange(startDate, endDate) {
+        const date = new Date(startDate.getTime());
+        const dates = [];
+        // wir blockieren bis zum checkout day (checkin am checkout tag möglich für neue gäste?
+        // Für diesen Kalender blockieren wir den Checkout Tag NICHT, damit er als Anreise für neue Gäste wählbar ist?
+        // Oder wir blockieren einfach alles. Airbnb: Checkout = 11 Uhr, Checkin = 15 Uhr.
+        // Einfache Logik: Wir speichern Strings YYYY-MM-DD.
+        // Wenn ich von 1. bis 5. buche, sind 1., 2., 3., 4. nachts belegt.
+        // Der 5. ist Abreise, also kann da jemand neues anreisen. -> 5. nicht blockieren.
+
+        while (date < endDate) {
+            dates.push(date.toISOString().split('T')[0]);
+            date.setDate(date.getDate() + 1);
+        }
+        return dates;
+    }
+
+    async function loadBookings() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "bookings"));
+            bookedDates = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.checkinDateISO && data.checkoutDateISO) {
+                    // Verwende ISO-Strings für saubere Berechnung
+                    const start = new Date(data.checkinDateISO);
+                    const end = new Date(data.checkoutDateISO);
+                    bookedDates.push(...getDatesInRange(start, end));
+                }
+                // Fallback für alte Daten (manuell)
+                else if (data.checkin && data.checkout) {
+                    // Parse German Date Format DD.MM.YYYY if necessary, but assumes format is parseable
+                    // Let's assume consistent format for future bookings
+                }
+            });
+            // Initial render after loading
+            renderCalendar(currentDate);
+        } catch (error) {
+            console.error("Fehler beim Laden der Buchungen:", error);
+            // Fallback Render falls offline
+            renderCalendar(currentDate);
+        }
+    }
+
+    // Start Loading
+    await loadBookings();
+
 
     // Listen for guest count changes
     if (guestCountInput) {
@@ -78,15 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
         guestCountInput.addEventListener('input', updateBookingSummary);
     }
 
-    // Listen for apartment changes (optional: could load different blocked dates)
     if (apartmentSelect) {
         apartmentSelect.addEventListener('change', () => {
             // Future: Load different bookedDates based on apartment
-            console.log("Apartment changed to: " + apartmentSelect.value);
         });
     }
-
-
 
     function renderCalendar(date) {
         calendarGrid.innerHTML = '';
@@ -97,8 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
         currentMonthYear.textContent = `${monthNames[month]} ${year}`;
 
-        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon ...
-        // Adjust for Monday start (0=Mon, 6=Sun)
+        const firstDay = new Date(year, month, 1).getDay();
         const startDay = firstDay === 0 ? 6 : firstDay - 1;
 
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -112,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             calendarGrid.appendChild(header);
         });
 
-        // Empty slots before first day
+        // Empty slots
         for (let i = 0; i < startDay; i++) {
             const empty = document.createElement('div');
             calendarGrid.appendChild(empty);
@@ -124,17 +178,14 @@ document.addEventListener('DOMContentLoaded', () => {
             dayEl.classList.add('calendar-day');
             dayEl.textContent = i;
 
-            // Generate standard date string YYYY-MM-DD
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             dayEl.dataset.date = dateStr;
 
-            // Check if booked
             if (bookedDates.includes(dateStr)) {
                 dayEl.classList.add('booked');
                 dayEl.title = "Belegt";
             }
 
-            // Check past dates
             const checkDate = new Date(year, month, i);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -142,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dayEl.classList.add('disabled');
             }
 
-            // Click Handler
             dayEl.addEventListener('click', () => handleDateClick(checkDate, dateStr, dayEl));
 
             calendarGrid.appendChild(dayEl);
@@ -154,19 +204,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDateClick(dateObj, dateStr, el) {
         if (el.classList.contains('disabled') || el.classList.contains('booked')) return;
 
-        // Reset if both selected or clicking before start
         if ((selectedStartDate && selectedEndDate) || (selectedStartDate && dateObj < selectedStartDate)) {
             selectedStartDate = dateObj;
             selectedEndDate = null;
         } else if (!selectedStartDate) {
             selectedStartDate = dateObj;
         } else if (!selectedEndDate) {
-            // Validate range (no booked dates in between)
             if (isRangeFree(selectedStartDate, dateObj)) {
                 selectedEndDate = dateObj;
             } else {
                 alert("Der gewählte Zeitraum enthält bereits belegte Tage.");
-                return; // Do not select
+                return;
             }
         }
 
@@ -176,9 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isRangeFree(start, end) {
         let current = new Date(start);
-        current.setDate(current.getDate() + 1); // Start checking from next day
+        current.setDate(current.getDate() + 1);
 
-        while (current <= end) {
+        while (current < end) { // Check bis < end, da end wieder Abreise ist
             const y = current.getFullYear();
             const m = String(current.getMonth() + 1).padStart(2, '0');
             const d = String(current.getDate()).padStart(2, '0');
@@ -196,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayDate = new Date(day.dataset.date);
             day.classList.remove('selected', 'in-range');
 
-            if (!day.dataset.date) return; // Skip empty/headers
+            if (!day.dataset.date) return;
 
             if (selectedStartDate && dayDate.getTime() === selectedStartDate.getTime()) {
                 day.classList.add('selected');
@@ -226,13 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const diffTime = Math.abs(selectedEndDate - selectedStartDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            // New Calculation
             const guests = parseInt(guestCountInput.value) || 1;
             const total = diffDays * pricePerPerson * guests;
 
             priceCalc.innerHTML = `${diffDays} Nächte x ${guests} Pers. x ${pricePerPerson} €`;
             totalDisplay.textContent = `${total} €`;
-            finalPriceAmount.textContent = `${total} €`; // Für Modal
+            finalPriceAmount.textContent = `${total} €`;
 
             const aptNr = apartmentSelect ? apartmentSelect.value : '15';
             bookingRef.textContent = `Whg${aptNr}-${selectedStartDate.toLocaleDateString('de-DE')}-${Date.now().toString().substr(-4)}`;
@@ -247,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Month Navigation
     prevBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
         renderCalendar(currentDate);
@@ -257,10 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentDate.setMonth(currentDate.getMonth() + 1);
         renderCalendar(currentDate);
     });
-
-    // Initial Render
-    renderCalendar(currentDate);
-
 
     /* --- Modal & Form Logic --- */
     const modal = document.getElementById('bookingFormContainer');
@@ -286,37 +328,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    finalForm.addEventListener('submit', (e) => {
+    finalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        submitBtn.textContent = 'Verarbeite...';
+        submitBtn.disabled = true;
 
-        // Save Booking locally (Simulation)
-        const newBooking = {
-            id: bookingRef.textContent,
-            name: document.getElementById('guestName').value,
-            email: document.getElementById('guestEmail').value,
-            phone: document.getElementById('guestPhone').value,
-            checkin: checkinDisplay.textContent,
-            checkout: checkoutDisplay.textContent,
-            price: finalPriceAmount.textContent,
-            apartment: apartmentSelect.value,
-            guests: guestCountInput.value,
-            date: new Date().toISOString()
-        };
+        // --- FIREBASE: Add to Firestore ---
+        try {
+            await addDoc(collection(db, "bookings"), {
+                bookingRef: bookingRef.textContent,
+                name: document.getElementById('guestName').value,
+                email: document.getElementById('guestEmail').value,
+                phone: document.getElementById('guestPhone').value,
+                checkin: checkinDisplay.textContent,
+                checkout: checkoutDisplay.textContent,
+                checkinDateISO: selectedStartDate.toISOString(), // for sorting/blocking
+                checkoutDateISO: selectedEndDate.toISOString(),  // for sorting/blocking
+                price: finalPriceAmount.textContent,
+                apartment: apartmentSelect.value,
+                guests: guestCountInput.value,
+                timestamp: new Date().toISOString()
+            });
 
-        const existingBookings = JSON.parse(localStorage.getItem('adminBookings')) || [];
-        existingBookings.push(newBooking);
-        localStorage.setItem('adminBookings', JSON.stringify(existingBookings));
-
-        submitBtn.textContent = 'Wird verarbeitet...';
-
-        setTimeout(() => {
+            // Success UI
             submitBtn.style.display = 'none';
             bankDetails.style.display = 'block';
             submitBtn.textContent = 'Kostenpflichtig buchen';
+            submitBtn.disabled = false;
 
-            // Optional: Scroll to bottom of modal
-            modal.querySelector('.modal-content').scrollTop = modal.querySelector('.modal-content').scrollHeight;
-        }, 1000);
+            // Reload calendar to show own booking immediately (blocked)
+            await loadBookings();
+
+        } catch (error) {
+            console.error("Error adding document: ", error);
+            alert("Es gab einen Fehler bei der Buchung. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.");
+            submitBtn.textContent = 'Kostenpflichtig buchen';
+            submitBtn.disabled = false;
+        }
 
     });
 

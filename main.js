@@ -151,19 +151,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderCalendar(date) {
+        // Clear grid
         calendarGrid.innerHTML = '';
+
         const year = date.getFullYear();
         const month = date.getMonth();
 
         const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
         currentMonthYear.textContent = `${monthNames[month]} ${year}`;
 
-        const firstDay = new Date(year, month, 1).getDay();
-        const startDay = firstDay === 0 ? 6 : firstDay - 1;
-
+        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon
+        const startDay = firstDay === 0 ? 6 : firstDay - 1; // 0 = Mon, ... 6 = Sun
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+        // Headers
         weekdays.forEach(day => {
             const header = document.createElement('div');
             header.classList.add('calendar-day-header');
@@ -171,11 +174,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             calendarGrid.appendChild(header);
         });
 
+        // Empty Slots (Days before 1st)
         for (let i = 0; i < startDay; i++) {
             const empty = document.createElement('div');
             calendarGrid.appendChild(empty);
         }
 
+        // Days 1..31
         for (let i = 1; i <= daysInMonth; i++) {
             const dayEl = document.createElement('div');
             dayEl.classList.add('calendar-day');
@@ -192,6 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const checkDate = new Date(year, month, i);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+
             if (checkDate < today) {
                 dayEl.classList.add('disabled');
             }

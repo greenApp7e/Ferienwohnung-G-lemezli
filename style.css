@@ -702,32 +702,22 @@ input:-webkit-autofill:active {
     transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Lightbox */
+/* LIGHTBOX & MODAL FIXES */
 .lightbox {
     display: none;
     position: fixed;
     z-index: 3000;
     padding-top: 0;
-    /* Center vertically */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    /* No scrollbars */
     background-color: rgba(0, 0, 0, 0.95);
-    /* Darker background */
     align-items: center;
-    /* Flexbox centering */
     justify-content: center;
-    display: none;
-    /* Default hidden, switched to flex by JS */
 }
 
-/* Need to force display:flex when active via JS, but JS uses display:block. 
-   Better to keep block layout but use margins for centering or adjust JS. 
-   Safe Approach: Keep JS as is (display:block) and use position absolute centering or margin auto.
-*/
 .lightbox.active {
     display: flex !important;
 }
@@ -776,7 +766,7 @@ input:-webkit-autofill:active {
     }
 }
 
-/* Modal Response */
+/* Modal Response (Simple) */
 @media (max-width: 768px) {
     .booking-container {
         grid-template-columns: 1fr;
@@ -784,6 +774,7 @@ input:-webkit-autofill:active {
 
     .booking-summary.card {
         position: static;
+        margin-top: 20px;
     }
 
     .lightbox-content {

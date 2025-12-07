@@ -181,7 +181,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleDateClick(dateObj, dateStr, el) {
         if (el.classList.contains('disabled') || el.classList.contains('booked')) return;
 
-        if ((selectedStartDate && selectedEndDate) || (selectedStartDate && dateObj < selectedStartDate)) {
+        // Reset if:
+        // 1. Both dates already selected (starting new range)
+        // 2. Clicked date is BEFORE start date
+        // 3. Clicked date is SAME as start date (prevent 0-night booking)
+        if ((selectedStartDate && selectedEndDate) || (selectedStartDate && dateObj <= selectedStartDate)) {
             selectedStartDate = dateObj;
             selectedEndDate = null;
         } else if (!selectedStartDate) {

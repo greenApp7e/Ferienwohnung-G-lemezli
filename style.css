@@ -637,27 +637,6 @@ footer .container {
         display: none;
         flex-direction: column;
         position: absolute;
-        top: 70px;
-        left: 0;
-        width: 100%;
-        background-color: var(--bg-card);
-        padding: 20px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .booking-container {
-        grid-template-columns: 1fr;
-    }
-
-    .booking-summary.card {
-        position: static;
-    }
-}
-
-/* Image adjustments */
-.apartment-img img {
-    filter: contrast(1.25) brightness(0.85) saturate(1.2);
-}
 
 /* Modal */
 .modal {

@@ -364,6 +364,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    /* --- Lightbox Logic --- */
+    // Create Lightbox DOM elements if not present
+    if (!document.getElementById('lightbox')) {
+        const lightbox = document.createElement('div');
+        lightbox.id = 'lightbox';
+        lightbox.className = 'lightbox';
+
+        const close = document.createElement('span');
+        close.className = 'lightbox-close';
+        close.innerHTML = '&times;';
+
+        const img = document.createElement('img');
+        img.className = 'lightbox-content';
+        img.id = 'lightbox-img';
+
+        lightbox.appendChild(close);
+        lightbox.appendChild(img);
+        document.body.appendChild(lightbox);
+
+        // Event Listeners
+        const galleryImages = document.querySelectorAll('.gallery-grid img');
+        galleryImages.forEach(image => {
+            image.style.cursor = 'pointer';
+            image.addEventListener('click', () => {
+                lightbox.style.display = 'block';
+                img.src = image.src;
+            });
+        });
+
+        close.addEventListener('click', () => {
+            lightbox.style.display = 'none';
+        });
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) lightbox.style.display = 'none';
+        });
+    }
+
     finalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         submitBtn.textContent = 'Verarbeite...';

@@ -170,7 +170,7 @@ ul {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('assets/gallery_8.jpg');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('img/gallery_8.jpg');
     background-size: cover;
     background-position: center;
     filter: contrast(1.3) brightness(0.8) saturate(1.3);

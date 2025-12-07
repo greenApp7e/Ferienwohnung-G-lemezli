@@ -247,21 +247,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateCalendarSelection() {
         const days = document.querySelectorAll('.calendar-day');
+
+        // Helper to format Date -> YYYY-MM-DD
+        const toYMD = (date) => {
+            if (!date) return null;
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const startStr = toYMD(selectedStartDate);
+        const endStr = toYMD(selectedEndDate);
+
         days.forEach(day => {
-            const dayDate = new Date(day.dataset.date);
+            const dayDateStr = day.dataset.date;
+            if (!dayDateStr) return;
+
+            // Reset classes
             day.classList.remove('selected', 'in-range');
 
-            if (!day.dataset.date) return;
-
-            if (selectedStartDate && dayDate.getTime() === selectedStartDate.getTime()) {
+            // Check Start
+            if (startStr && dayDateStr === startStr) {
                 day.classList.add('selected');
             }
-            if (selectedEndDate && dayDate.getTime() === selectedEndDate.getTime()) {
+            // Check End
+            if (endStr && dayDateStr === endStr) {
                 day.classList.add('selected');
             }
-
-            if (selectedStartDate && selectedEndDate) {
-                if (dayDate > selectedStartDate && dayDate < selectedEndDate) {
+            // Check Range
+            if (startStr && endStr) {
+                if (dayDateStr > startStr && dayDateStr < endStr) {
                     day.classList.add('in-range');
                 }
             }

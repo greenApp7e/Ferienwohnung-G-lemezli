@@ -132,11 +132,16 @@ ul {
 }
 
 .logo {
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     font-weight: 400;
     color: var(--primary-color);
     font-family: 'Great Vibes', cursive;
     letter-spacing: 1px;
+    white-space: nowrap;
+    line-height: 1;
+    margin-right: 20px;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .nav-links {

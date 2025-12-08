@@ -61,17 +61,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function changeLanguage(lang) {
         const t = translations[lang];
+        const fallback = translations['en'] || translations['de']; // Fallback chain
+
         if (!t) return;
 
         // Update all data-i18n elements
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
-            if (t[key]) {
+
+            // Usage: Target Lang > English > German > Empty
+            const newText = t[key] || fallback[key] || "";
+
+            if (newText) {
                 // Determine if we should set textContent or innerHTML (if bold tags used)
-                if (t[key].includes('<')) {
-                    el.innerHTML = t[key];
+                if (newText.includes('<')) {
+                    el.innerHTML = newText;
                 } else {
-                    el.textContent = t[key];
+                    el.textContent = newText;
                 }
             }
         });

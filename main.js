@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { translations } from "./translations.js";
 
 // Your web app's Firebase configuration
@@ -41,23 +41,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const navLinks = document.querySelector('.nav-links');
 
-    /* --- Language System --- */
-    const languageSelect = document.getElementById('languageSelect');
-
-    // Default to stored or DE
-    let currentLang = localStorage.getItem('language') || 'de';
-
-    // Initialize
-    if (languageSelect) {
-        languageSelect.value = currentLang;
-        changeLanguage(currentLang);
-
-        languageSelect.addEventListener('change', (e) => {
-            currentLang = e.target.value;
-            localStorage.setItem('language', currentLang);
-            changeLanguage(currentLang);
+    if (mobileToggle) {
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileToggle.classList.toggle('open');
         });
     }
+
+    /* --- Language System --- */
+    const languageSelect = document.getElementById('languageSelect');
 
     function changeLanguage(lang) {
         const t = translations[lang];
@@ -65,15 +57,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!t) return;
 
+        // Save selection
+        localStorage.setItem('preferredLanguage', lang);
+
         // Update all data-i18n elements
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
-
-            // Usage: Target Lang > English > German > Empty
             const newText = t[key] || fallback[key] || "";
-
             if (newText) {
-                // Determine if we should set textContent or innerHTML (if bold tags used)
                 if (newText.includes('<')) {
                     el.innerHTML = newText;
                 } else {
@@ -82,15 +73,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Update document title if needed (optional)
-        // document.title = t['hero_title'].replace(/<br>/g, ""); 
+        // Re-render things that depend on language (Calendar, etc.)
+        renderCalendar(currentDate);
+        updateBookingSummary(); // Refresh price text
     }
 
-    if (mobileToggle) {
-        mobileToggle.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-            mobileToggle.classList.toggle('open');
+    // Initialize Language
+    const savedLang = localStorage.getItem('preferredLanguage') || 'de';
+    if (languageSelect) {
+        languageSelect.value = savedLang;
+        languageSelect.addEventListener('change', (e) => {
+            changeLanguage(e.target.value);
         });
+        // Apply initial language
+        changeLanguage(savedLang);
     }
 
     /* --- Smooth Scroll for Anchor Links --- */
@@ -118,51 +114,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    /* --- Booking Calendar System --- */
-    const calendarGrid = document.getElementById('calendarGrid');
+    /* --- BOOKING SYSTEM --- */
+    const calendarGrid = document.querySelector('.calendar-grid');
     const currentMonthYear = document.getElementById('currentMonthYear');
     const prevBtn = document.getElementById('prevMonth');
     const nextBtn = document.getElementById('nextMonth');
 
-    // Booking UI Elements
-    const checkinDisplay = document.getElementById('checkinDate');
-    const checkoutDisplay = document.getElementById('checkoutDate');
-    const priceCalc = document.getElementById('priceCalc');
-    const totalDisplay = document.getElementById('totalDisplay');
-    const totalPriceContainer = document.getElementById('totalPrice');
-    const bookBtn = document.getElementById('bookBtn');
-
-    // New Elements
+    // Form Inputs
     const guestCountInput = document.getElementById('guestCount');
     const apartmentSelect = document.getElementById('apartmentSelect');
 
-    // State Variables (anstatt DOM-Links, da wir manche Elemente gelöscht haben)
-    let calculatedTotal = 0;
-    let currentBookingRef = "";
-
-    // Alte DOM Elemente (falls sie existieren, nutzen wir sie für Anzeige, sonst ignorieren)
-    const finalPriceAmount = document.getElementById('finalPriceAmount');
-    const bookingRef = document.getElementById('bookingRef');
-
+    // State
+    const pricePerPerson = 45;
     let currentDate = new Date();
-    let selectedStartDate = null;
-    let selectedEndDate = null;
-    const pricePerPerson = 45; // Preis pro Person in Euro
-
-    // --- FIREBASE: Fetch Booked Dates ---
-    let bookedDates = [];
+    let selectionStart = null;
+    let selectionEnd = null;
+    let bookedDates = []; // YYYY-MM-DD strings
 
     function getDatesInRange(startDate, endDate) {
         const date = new Date(startDate.getTime());
         const dates = [];
-
         while (date <= endDate) {
-            // Use local YYYY-MM-DD construction to avoid timezone shifts
             const y = date.getFullYear();
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const d = String(date.getDate()).padStart(2, '0');
             dates.push(`${y}-${m}-${d}`);
-
             date.setDate(date.getDate() + 1);
         }
         return dates;
@@ -175,7 +151,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 // Filter: Only show Confirmed or Admin Block
-                if ((data.status === 'confirmed' || data.name === 'Admin Block') && data.checkinDateISO && data.checkoutDateISO) {
+                // Also showing 'pending' for immediate feedback might be good, 
+                // but let's stick to confirmed/block for now unless user wants otherwise.
+                // Actually, if we just made a booking, it's pending. We should probably show it.
+                if ((data.status === 'confirmed' || data.status === 'pending' || data.name === 'Admin Block') && data.checkinDateISO && data.checkoutDateISO) {
                     const start = new Date(data.checkinDateISO);
                     const end = new Date(data.checkoutDateISO);
                     bookedDates.push(...getDatesInRange(start, end));
@@ -184,202 +163,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderCalendar(currentDate);
         } catch (error) {
             console.error("Fehler beim Laden der Buchungen:", error);
+            const curLang = languageSelect ? languageSelect.value : 'de';
+            const t = translations[curLang] || translations['de'];
+            console.log(t.error_load || "Fehler beim Laden.");
             renderCalendar(currentDate);
         }
     }
 
+    // Initial Load
     await loadBookings();
-
 
     if (guestCountInput) {
         guestCountInput.addEventListener('change', updateBookingSummary);
         guestCountInput.addEventListener('input', updateBookingSummary);
     }
-
-    function renderCalendar(date) {
-        // Clear grid
-        calendarGrid.innerHTML = '';
-
-        const year = date.getFullYear();
-        const month = date.getMonth();
-
-        const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-        currentMonthYear.textContent = `${monthNames[month]} ${year}`;
-
-        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon
-        const startDay = firstDay === 0 ? 6 : firstDay - 1; // 0 = Mon, ... 6 = Sun
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-
-        // Headers
-        weekdays.forEach(day => {
-            const header = document.createElement('div');
-            header.classList.add('calendar-day-header');
-            header.textContent = day;
-            calendarGrid.appendChild(header);
-        });
-
-        // Empty Slots (Days before 1st)
-        for (let i = 0; i < startDay; i++) {
-            const empty = document.createElement('div');
-            calendarGrid.appendChild(empty);
-        }
-
-        // Days 1..31
-        for (let i = 1; i <= daysInMonth; i++) {
-            const dayEl = document.createElement('div');
-            dayEl.classList.add('calendar-day');
-            dayEl.textContent = i;
-
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            dayEl.dataset.date = dateStr;
-
-            if (bookedDates.includes(dateStr)) {
-                dayEl.classList.add('booked');
-                dayEl.title = "Belegt";
-            }
-
-            const checkDate = new Date(year, month, i);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (checkDate < today) {
-                dayEl.classList.add('disabled');
-            }
-
-            dayEl.addEventListener('click', () => handleDateClick(checkDate, dateStr, dayEl));
-
-            calendarGrid.appendChild(dayEl);
-        }
-
-        updateCalendarSelection();
-    }
-
-    function handleDateClick(dateObj, dateStr, el) {
-        if (el.classList.contains('disabled') || el.classList.contains('booked')) return;
-
-        // Reset if:
-        // 1. Both dates already selected (starting new range)
-        // 2. Clicked date is BEFORE start date
-        // 3. Clicked date is SAME as start date (prevent 0-night booking)
-        if ((selectedStartDate && selectedEndDate) || (selectedStartDate && dateObj <= selectedStartDate)) {
-            selectedStartDate = dateObj;
-            selectedEndDate = null;
-        } else if (!selectedStartDate) {
-            selectedStartDate = dateObj;
-        } else if (!selectedEndDate) {
-            if (isRangeFree(selectedStartDate, dateObj)) {
-                selectedEndDate = dateObj;
-            } else {
-                alert("Der gewählte Zeitraum enthält bereits belegte Tage.");
-                return;
-            }
-        }
-
-        updateCalendarSelection();
-        updateBookingSummary();
-    }
-
-    function isRangeFree(start, end) {
-        let current = new Date(start);
-        current.setDate(current.getDate() + 1);
-
-        while (current < end) {
-            const y = current.getFullYear();
-            const m = String(current.getMonth() + 1).padStart(2, '0');
-            const d = String(current.getDate()).padStart(2, '0');
-            const dateStr = `${y}-${m}-${d}`;
-
-            if (bookedDates.includes(dateStr)) return false;
-            current.setDate(current.getDate() + 1);
-        }
-        return true;
-    }
-
-    function updateCalendarSelection() {
-        const days = document.querySelectorAll('.calendar-day');
-
-        // Helper to format Date -> YYYY-MM-DD
-        const toYMD = (date) => {
-            if (!date) return null;
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        };
-
-        const startStr = toYMD(selectedStartDate);
-        const endStr = toYMD(selectedEndDate);
-
-        days.forEach(day => {
-            const dayDateStr = day.dataset.date;
-            if (!dayDateStr) return;
-
-            // Reset classes
-            day.classList.remove('selected', 'in-range');
-
-            // Check Start
-            if (startStr && dayDateStr === startStr) {
-                day.classList.add('selected');
-            }
-            // Check End
-            if (endStr && dayDateStr === endStr) {
-                day.classList.add('selected');
-            }
-            // Check Range
-            if (startStr && endStr) {
-                if (dayDateStr > startStr && dayDateStr < endStr) {
-                    day.classList.add('in-range');
-                }
-            }
-        });
-    }
-
-    function updateBookingSummary() {
-        if (selectedStartDate) {
-            checkinDisplay.textContent = selectedStartDate.toLocaleDateString('de-DE');
-        } else {
-            checkinDisplay.textContent = '-';
-        }
-
-        if (selectedEndDate) {
-            checkoutDisplay.textContent = selectedEndDate.toLocaleDateString('de-DE');
-
-            const diffTime = Math.abs(selectedEndDate - selectedStartDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            const guests = parseInt(guestCountInput.value) || 1;
-            const total = diffDays * pricePerPerson * guests;
-
-            // Save to variable
-            calculatedTotal = total;
-
-            const aptNr = apartmentSelect ? apartmentSelect.value : '15';
-            currentBookingRef = `Whg${aptNr}-${selectedStartDate.toLocaleDateString('de-DE')}-${Date.now().toString().substr(-4)}`;
-
-            // UI Updates (if elements exist)
-            priceCalc.innerHTML = `${diffDays} Nächte x ${guests} Pers. x ${pricePerPerson} €`;
-            totalDisplay.textContent = `${total} €`;
-
-            if (finalPriceAmount) finalPriceAmount.textContent = `${total} €`;
-            if (bookingRef) bookingRef.textContent = currentBookingRef;
-
-            totalPriceContainer.style.display = 'flex';
-            bookBtn.disabled = false;
-        } else {
-            checkoutDisplay.textContent = '-';
-            priceCalc.textContent = "Wählen Sie ein Abreisedatum";
-            totalPriceContainer.style.display = 'none';
-            bookBtn.disabled = true;
-        }
-    }
-
-    const modal = document.getElementById('bookingFormContainer');
-    const closeBtn = document.querySelector('.close-modal');
-    const finalForm = document.getElementById('finalBookingForm');
-    const bankDetails = document.getElementById('bankDetails');
-    const submitBtn = document.getElementById('submitBookingBtn');
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
@@ -395,29 +192,257 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    if (bookBtn) {
-        bookBtn.addEventListener('click', () => {
-            modal.style.display = 'flex';
+    /* --- Calendar Render Logic --- */
+    function renderCalendar(date) {
+        if (!calendarGrid) return;
+
+        // Get current language dictionary
+        const curLang = languageSelect ? languageSelect.value : 'de';
+        const t = translations[curLang] || translations['de'];
+
+        // Clear grid
+        calendarGrid.innerHTML = '';
+
+        const year = date.getFullYear();
+        const month = date.getMonth();
+
+        // Use translated months
+        const monthNames = t.months || ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+        currentMonthYear.textContent = `${monthNames[month]} ${year}`;
+
+        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon
+        const startDay = firstDay === 0 ? 6 : firstDay - 1; // 0 = Mon, ... 6 = Sun
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Use translated weekdays
+        const weekdays = t.weekdays || ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+        // Headers
+        weekdays.forEach(day => {
+            const header = document.createElement('div');
+            header.classList.add('calendar-day-header');
+            header.textContent = day;
+            calendarGrid.appendChild(header);
+        });
+
+        // Empty Slots
+        for (let i = 0; i < startDay; i++) {
+            const empty = document.createElement('div');
+            calendarGrid.appendChild(empty);
+        }
+
+        // Days
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayEl = document.createElement('div');
+            dayEl.classList.add('calendar-day');
+            dayEl.textContent = i;
+
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            dayEl.dataset.date = dateStr;
+
+            if (bookedDates.includes(dateStr)) {
+                dayEl.classList.add('booked');
+                dayEl.title = t.legend_booked || "Belegt";
+            }
+
+            const checkDate = new Date(year, month, i);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (checkDate < today) {
+                dayEl.classList.add('disabled');
+            }
+
+            dayEl.addEventListener('click', () => handleDateClick(dateStr));
+            calendarGrid.appendChild(dayEl);
+        }
+        updateCalendarSelection();
+    }
+
+    function handleDateClick(dateStr) {
+        if (bookedDates.includes(dateStr)) return;
+
+        // Check if date is in past
+        const clickedDate = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (clickedDate < today) return;
+
+        // Translation helper
+        const curLang = languageSelect ? languageSelect.value : 'de';
+        const t = translations[curLang] || translations['de'];
+
+        if (!selectionStart || (selectionStart && selectionEnd)) {
+            selectionStart = dateStr;
+            selectionEnd = null;
+        } else {
+            // Check if range is valid (no booked dates in between)
+            if (new Date(dateStr) < new Date(selectionStart)) {
+                selectionStart = dateStr;
+                selectionEnd = null;
+            } else {
+                if (isRangeAvailable(selectionStart, dateStr)) {
+                    selectionEnd = dateStr;
+                } else {
+                    alert(t.msg_range_occupied || "Der gewählte Zeitraum enthält bereits belegte Tage.");
+                    selectionStart = dateStr;
+                    selectionEnd = null;
+                }
+            }
+        }
+        updateCalendarSelection();
+        updateBookingSummary();
+    }
+
+    function isRangeAvailable(start, end) {
+        let curr = new Date(start);
+        const endDate = new Date(end);
+        while (curr <= endDate) {
+            const d = curr.toISOString().split('T')[0];
+            if (bookedDates.includes(d)) return false;
+            curr.setDate(curr.getDate() + 1);
+        }
+        return true;
+    }
+
+    function updateCalendarSelection() {
+        document.querySelectorAll('.calendar-day').forEach(el => {
+            el.classList.remove('selected', 'in-range');
+            const d = el.dataset.date;
+            if (d === selectionStart || d === selectionEnd) {
+                el.classList.add('selected');
+            }
+            if (selectionStart && selectionEnd) {
+                if (d > selectionStart && d < selectionEnd) {
+                    el.classList.add('in-range');
+                }
+            }
         });
     }
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            modal.style.display = 'none';
-            bankDetails.style.display = 'none';
-            finalForm.reset();
-            submitBtn.style.display = 'block';
+    function updateBookingSummary() {
+        const checkinEl = document.getElementById('summaryCheckin');
+        const checkoutEl = document.getElementById('summaryCheckout');
+        const totalEl = document.getElementById('summaryTotal');
+        const dateNote = document.getElementById('dateSelectionNote');
+        const submitBtn = document.getElementById('openBookingModal');
+
+        const curLang = languageSelect ? languageSelect.value : 'de';
+        const t = translations[curLang] || translations['de'];
+
+        if (selectionStart && selectionEnd) {
+            checkinEl.textContent = selectionStart;
+            checkoutEl.textContent = selectionEnd;
+
+            const start = new Date(selectionStart);
+            const end = new Date(selectionEnd);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            const guests = parseInt(guestCountInput.value) || 1;
+            const total = diffDays * guests * pricePerPerson;
+
+            totalEl.textContent = `${total} €`;
+            dateNote.textContent = `${diffDays} ${t.msg_price_calc_prefix || 'Nächte x'} ${guests} ${t.msg_price_calc_middle || 'Pers. x'} ${pricePerPerson} €`;
+
+            submitBtn.disabled = false;
+        } else {
+            checkinEl.textContent = "-";
+            checkoutEl.textContent = "-";
+            totalEl.textContent = "-";
+            dateNote.textContent = t.msg_select_dates || "Wählen Sie Reisedaten für die Preisberechnung";
+            submitBtn.disabled = true;
+        }
+    }
+
+
+    /* --- MODAL & SUBMIT --- */
+    const modal = document.getElementById('bookingModal');
+    const openModalBtn = document.getElementById('openBookingModal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const bookingForm = document.getElementById('bookingForm');
+
+    if (openModalBtn) {
+        openModalBtn.addEventListener('click', () => {
+            if (!selectionStart || !selectionEnd) return;
+            modal.style.display = "block";
         });
     }
 
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            modal.style.display = "none";
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
         }
     });
 
+    if (bookingForm) {
+        bookingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const curLang = languageSelect ? languageSelect.value : 'de';
+            const t = translations[curLang] || translations['de'];
+
+            const submitBtn = bookingForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = t.btn_processing || "Verarbeite...";
+
+            const name = document.getElementById('b_name').value;
+            const email = document.getElementById('b_email').value;
+            const phone = document.getElementById('b_phone').value;
+            const apartment = apartmentSelect.value;
+            const guests = guestCountInput.value;
+
+            // Generate Booking Reference
+            const refPrefix = t.booking_ref_prefix || "Whg";
+            const bookingRef = `${refPrefix}-${Date.now().toString().slice(-6)}`;
+
+            try {
+                // Save to Firestore
+                await addDoc(collection(db, "bookings"), {
+                    selectionStart: selectionStart,
+                    selectionEnd: selectionEnd,
+                    checkinDateISO: new Date(selectionStart).toISOString(),
+                    checkoutDateISO: new Date(selectionEnd).toISOString(),
+                    apartment: apartment,
+                    guests: parseInt(guests),
+                    totalPrice: document.getElementById('summaryTotal').textContent,
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    bookingRef: bookingRef,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                // Success UI
+                alert(`${t.success_title || 'Vielen Dank!'} \n${t.success_msg || 'Ihre Anfrage wurde gesendet.'}\nRef: ${bookingRef}`);
+                modal.style.display = "none";
+                bookingForm.reset();
+                selectionStart = null;
+                selectionEnd = null;
+                updateCalendarSelection();
+                updateBookingSummary();
+
+            } catch (error) {
+                console.error("Error adding booking: ", error);
+                alert(t.error_transfer || "Es gab einen Fehler bei der Übertragung.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+                // Re-fetch 
+                loadBookings();
+            }
+        });
+    }
+
     /* --- Lightbox Logic --- */
-    // Create Lightbox DOM elements if not present
     if (!document.getElementById('lightbox')) {
         const lightbox = document.createElement('div');
         lightbox.id = 'lightbox';
@@ -435,14 +460,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         lightbox.appendChild(img);
         document.body.appendChild(lightbox);
 
-        // Event Listeners for Lightbox
+        // Event Listeners
         const galleryImages = document.querySelectorAll('.gallery-grid img');
         galleryImages.forEach(image => {
             image.style.cursor = 'pointer';
             image.addEventListener('click', () => {
                 lightbox.style.display = 'flex';
-                lightbox.style.alignItems = 'center';
-                lightbox.style.justifyContent = 'center';
                 img.src = image.src;
             });
         });
@@ -455,46 +478,5 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target === lightbox) lightbox.style.display = 'none';
         });
     }
-
-    /* --- Final Booking Form Submission --- */
-    finalForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        submitBtn.textContent = 'Verarbeite...';
-        submitBtn.disabled = true;
-
-        // --- FIREBASE: Add to Firestore ---
-        try {
-            await addDoc(collection(db, "bookings"), {
-                bookingRef: currentBookingRef || `REF-${Date.now()}`, // Fallback if empty
-                name: document.getElementById('guestName').value,
-                email: document.getElementById('guestEmail').value,
-                phone: document.getElementById('guestPhone').value,
-                checkin: checkinDisplay.textContent,
-                checkout: checkoutDisplay.textContent,
-                checkinDateISO: selectedStartDate.toISOString(),
-                checkoutDateISO: selectedEndDate.toISOString(),
-                price: `${calculatedTotal} €`,
-                apartment: apartmentSelect.value,
-                guests: guestCountInput.value,
-                status: 'pending', // FORCE PENDING
-                timestamp: new Date().toISOString()
-            });
-
-            // Success UI
-            submitBtn.style.display = 'none';
-            bankDetails.style.display = 'block';
-            submitBtn.textContent = 'Kostenpflichtig buchen';
-            submitBtn.disabled = false;
-
-            await loadBookings();
-
-        } catch (error) {
-            console.error("Error adding document: ", error);
-            alert("Es gab einen Fehler bei der Übertragung. Bitte prüfen Sie Ihre Verbindung.");
-            submitBtn.textContent = 'Kostenpflichtig buchen';
-            submitBtn.disabled = false;
-        }
-
-    });
 
 });

@@ -244,7 +244,7 @@ ul {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('img/gallery_8.jpg');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('img/gallery_9.jpg');
     background-size: cover;
     background-position: center;
     filter: contrast(1.3) brightness(0.8) saturate(1.3);
@@ -967,12 +967,8 @@ input:-webkit-autofill:active {
 
     .btn-primary {
         width: 100%;
-        top: 70px;
-        left: 0;
-        width: 100%;
-        background-color: var(--bg-card);
-        padding: 20px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        /* Full width buttons are easier to tap */
+        text-align: center;
     }
 }
 

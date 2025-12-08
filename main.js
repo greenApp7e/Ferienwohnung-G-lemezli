@@ -389,6 +389,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         lightbox.appendChild(img);
         document.body.appendChild(lightbox);
 
+        // Event Listeners for Lightbox
+        const galleryImages = document.querySelectorAll('.gallery-grid img');
+        galleryImages.forEach(image => {
+            image.style.cursor = 'pointer';
+            image.addEventListener('click', () => {
+                lightbox.style.display = 'flex';
+                lightbox.style.alignItems = 'center';
+                lightbox.style.justifyContent = 'center';
+                img.src = image.src;
+            });
+        });
+
+        close.addEventListener('click', () => {
+            lightbox.style.display = 'none';
+        });
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) lightbox.style.display = 'none';
+        });
+    }
+
+    /* --- Final Booking Form Submission --- */
+    finalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.textContent = 'Verarbeite...';
         submitBtn.disabled = true;
 
         // --- FIREBASE: Add to Firestore ---

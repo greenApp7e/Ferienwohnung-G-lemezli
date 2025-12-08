@@ -315,7 +315,7 @@ const translations = {
         sight1_desc: "Погрузитесь в римскую историю.",
         sight2_title: "Эллингер Тор:",
         sight2_desc: "Одни из самых красивых городских ворот Баварии.",
-        sight3_title: "Вюльцбург:",
+        sight3_title: "Wülzburg:",
         sight3_desc: "Внушительная крепость с великолепным видом.",
         loc_shopping_title: "Шопинг и еда",
         loc_shopping_desc: "В непосредственной близости вы найдете множество магазинов, кафе и ресторанов. Супермаркеты также в быстрой доступности.",
@@ -376,103 +376,15 @@ const db = firebase.firestore();
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    /* --- Theme Toggle (Dark/Light) --- */
+    /* --- INITIALIZATION & STATE (Moved up to avoid ReferenceErrors) --- */
+
+    // Selectors
     const themeToggle = document.getElementById('themeToggle');
     const body = document.body;
-
-    // Check local storage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
-        body.classList.add('dark-mode');
-    }
-
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-        });
-    }
-
-    /* --- Mobile Navigation --- */
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const navLinks = document.querySelector('.nav-links');
-
-    if (mobileToggle) {
-        mobileToggle.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-            mobileToggle.classList.toggle('open');
-        });
-    }
-
-    /* --- Language System --- */
     const languageSelect = document.getElementById('languageSelect');
 
-    function changeLanguage(lang) {
-        const t = translations[lang];
-        const fallback = translations['en'] || translations['de']; // Fallback chain
-
-        if (!t) return;
-
-        // Save selection
-        localStorage.setItem('preferredLanguage', lang);
-
-        // Update all data-i18n elements
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            const newText = t[key] || fallback[key] || "";
-            if (newText) {
-                if (newText.includes('<')) {
-                    el.innerHTML = newText;
-                } else {
-                    el.textContent = newText;
-                }
-            }
-        });
-
-        // Re-render things that depend on language (Calendar, etc.)
-        renderCalendar(currentDate);
-        updateBookingSummary(); // Refresh price text
-    }
-
-    // Initialize Language
-    const savedLang = localStorage.getItem('preferredLanguage') || 'de';
-    if (languageSelect) {
-        languageSelect.value = savedLang;
-        languageSelect.addEventListener('change', (e) => {
-            changeLanguage(e.target.value);
-        });
-        // Apply initial language
-        changeLanguage(savedLang);
-    }
-
-    /* --- Smooth Scroll for Anchor Links --- */
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
-
-            if (targetElement) {
-                if (navLinks.classList.contains('active')) {
-                    navLinks.classList.remove('active');
-                    mobileToggle.classList.remove('open');
-                }
-
-                const headerOffset = 70;
-                const elementPosition = targetElement.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: "smooth"
-                });
-            }
-        });
-    });
-
-    /* --- BOOKING SYSTEM --- */
     const calendarGrid = document.querySelector('.calendar-grid');
     const currentMonthYear = document.getElementById('currentMonthYear');
     const prevBtn = document.getElementById('prevMonth');
@@ -481,13 +393,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Form Inputs
     const guestCountInput = document.getElementById('guestCount');
     const apartmentSelect = document.getElementById('apartmentSelect');
+    const modal = document.getElementById('bookingModal');
+    const openModalBtn = document.getElementById('openBookingModal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const bookingForm = document.getElementById('bookingForm');
 
-    // State
+    // State Variables
     const pricePerPerson = 45;
     let currentDate = new Date();
     let selectionStart = null;
     let selectionEnd = null;
     let bookedDates = []; // YYYY-MM-DD strings
+
+    /* --- FUNCTIONS --- */
 
     function getDatesInRange(startDate, endDate) {
         const date = new Date(startDate.getTime());
@@ -502,52 +420,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return dates;
     }
 
-    async function loadBookings() {
-        try {
-            // Compat syntax: db.collection(...)
-            const querySnapshot = await db.collection("bookings").get();
-            bookedDates = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                if ((data.status === 'confirmed' || data.status === 'pending' || data.name === 'Admin Block') && data.checkinDateISO && data.checkoutDateISO) {
-                    const start = new Date(data.checkinDateISO);
-                    const end = new Date(data.checkoutDateISO);
-                    bookedDates.push(...getDatesInRange(start, end));
-                }
-            });
-            renderCalendar(currentDate);
-        } catch (error) {
-            console.error("Fehler beim Laden der Buchungen:", error);
-            const curLang = languageSelect ? languageSelect.value : 'de';
-            const t = translations[curLang] || translations['de'];
-            console.log(t.error_load || "Fehler beim Laden.");
-            renderCalendar(currentDate);
-        }
-    }
-
-    // Initial Load
-    await loadBookings();
-
-    if (guestCountInput) {
-        guestCountInput.addEventListener('change', updateBookingSummary);
-        guestCountInput.addEventListener('input', updateBookingSummary);
-    }
-
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            renderCalendar(currentDate);
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            renderCalendar(currentDate);
-        });
-    }
-
-    /* --- Calendar Render Logic --- */
     function renderCalendar(date) {
         if (!calendarGrid) return;
 
@@ -563,7 +435,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Use translated months
         const monthNames = t.months || ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-        currentMonthYear.textContent = `${monthNames[month]} ${year}`;
+        if (currentMonthYear) {
+            currentMonthYear.textContent = `${monthNames[month]} ${year}`;
+        }
 
         const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon
         const startDay = firstDay === 0 ? 6 : firstDay - 1; // 0 = Mon, ... 6 = Sun
@@ -710,17 +584,140 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function changeLanguage(lang) {
+        const t = translations[lang];
+        const fallback = translations['en'] || translations['de'];
 
-    /* --- MODAL & SUBMIT --- */
-    const modal = document.getElementById('bookingModal');
-    const openModalBtn = document.getElementById('openBookingModal');
-    const closeModalBtn = document.querySelector('.close-modal');
-    const bookingForm = document.getElementById('bookingForm');
+        if (!t) return;
 
+        // Save selection
+        localStorage.setItem('preferredLanguage', lang);
+
+        // Update all data-i18n elements
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const newText = t[key] || fallback[key] || "";
+            if (newText) {
+                if (newText.includes('<')) {
+                    el.innerHTML = newText;
+                } else {
+                    el.textContent = newText;
+                }
+            }
+        });
+
+        // Re-render things that depend on language (Calendar, etc.)
+        renderCalendar(currentDate);
+        updateBookingSummary();
+    }
+
+    async function loadBookings() {
+        try {
+            const querySnapshot = await db.collection("bookings").get();
+            bookedDates = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if ((data.status === 'confirmed' || data.status === 'pending' || data.name === 'Admin Block') && data.checkinDateISO && data.checkoutDateISO) {
+                    const start = new Date(data.checkinDateISO);
+                    const end = new Date(data.checkoutDateISO);
+                    bookedDates.push(...getDatesInRange(start, end));
+                }
+            });
+            renderCalendar(currentDate);
+        } catch (error) {
+            console.error("Fehler beim Laden der Buchungen:", error);
+            const curLang = languageSelect ? languageSelect.value : 'de';
+            const t = translations[curLang] || translations['de'];
+            console.log(t.error_load || "Fehler beim Laden.");
+            renderCalendar(currentDate);
+        }
+    }
+
+    /* --- EVENT LISTENERS --- */
+
+    // Theme Toggle
+    const savedTheme = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+        body.classList.add('dark-mode');
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
+        });
+    }
+
+    // Mobile Menu
+    if (mobileToggle) {
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileToggle.classList.toggle('open');
+        });
+    }
+
+    // Language
+    const savedLang = localStorage.getItem('preferredLanguage') || 'de';
+    if (languageSelect) {
+        languageSelect.value = savedLang;
+        languageSelect.addEventListener('change', (e) => {
+            changeLanguage(e.target.value);
+        });
+        // Apply initial language
+        changeLanguage(savedLang);
+    }
+
+    // Calendar Navigation
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+    }
+
+    // Inputs
+    if (guestCountInput) {
+        guestCountInput.addEventListener('change', updateBookingSummary);
+        guestCountInput.addEventListener('input', updateBookingSummary);
+    }
+
+    // Smooth Scroll
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                if (navLinks.classList.contains('active')) {
+                    navLinks.classList.remove('active');
+                    mobileToggle.classList.remove('open');
+                }
+                const headerOffset = 70;
+                const elementPosition = targetElement.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }
+        });
+    });
+
+    // Modal Events
     if (openModalBtn) {
         openModalBtn.addEventListener('click', () => {
             if (!selectionStart || !selectionEnd) return;
-            modal.style.display = "flex"; // Changed to flex to center
+            modal.style.display = "flex";
         });
     }
 
@@ -736,6 +733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Form Submit
     if (bookingForm) {
         bookingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -753,13 +751,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const phone = document.getElementById('b_phone').value;
             const apartment = apartmentSelect.value;
             const guests = guestCountInput.value;
-
-            // Generate Booking Reference
             const refPrefix = t.booking_ref_prefix || "Whg";
             const bookingRef = `${refPrefix}-${Date.now().toString().slice(-6)}`;
 
             try {
-                // Save to Firestore (Compat)
                 await db.collection("bookings").add({
                     selectionStart: selectionStart,
                     selectionEnd: selectionEnd,
@@ -773,10 +768,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     phone: phone,
                     bookingRef: bookingRef,
                     status: 'pending',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp() // Compat Timestamp
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Success UI
                 alert(`${t.success_title || 'Vielen Dank!'} \n${t.success_msg || 'Ihre Anfrage wurde gesendet.'}\nRef: ${bookingRef}`);
                 modal.style.display = "none";
                 bookingForm.reset();
@@ -791,7 +785,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalBtnText;
-                // Re-fetch 
                 loadBookings();
             }
         });
@@ -815,14 +808,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         lightbox.appendChild(img);
         document.body.appendChild(lightbox);
 
-        // Event Listeners
         const galleryImages = document.querySelectorAll('.gallery-grid img');
         galleryImages.forEach(image => {
             image.style.cursor = 'pointer';
             image.addEventListener('click', () => {
                 lightbox.style.display = 'flex';
                 img.src = image.src;
-                lightbox.classList.add('active'); // Helper class
+                lightbox.classList.add('active');
             });
         });
 
@@ -838,5 +830,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Initial Data Load
+    await loadBookings();
 
 });

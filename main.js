@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { translations } from "./translations.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -39,6 +40,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     /* --- Mobile Navigation --- */
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const navLinks = document.querySelector('.nav-links');
+
+    /* --- Language System --- */
+    const languageSelect = document.getElementById('languageSelect');
+
+    // Default to stored or DE
+    let currentLang = localStorage.getItem('language') || 'de';
+
+    // Initialize
+    if (languageSelect) {
+        languageSelect.value = currentLang;
+        changeLanguage(currentLang);
+
+        languageSelect.addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('language', currentLang);
+            changeLanguage(currentLang);
+        });
+    }
+
+    function changeLanguage(lang) {
+        const t = translations[lang];
+        if (!t) return;
+
+        // Update all data-i18n elements
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key]) {
+                // Determine if we should set textContent or innerHTML (if bold tags used)
+                if (t[key].includes('<')) {
+                    el.innerHTML = t[key];
+                } else {
+                    el.textContent = t[key];
+                }
+            }
+        });
+
+        // Update document title if needed (optional)
+        // document.title = t['hero_title'].replace(/<br>/g, ""); 
+    }
 
     if (mobileToggle) {
         mobileToggle.addEventListener('click', () => {

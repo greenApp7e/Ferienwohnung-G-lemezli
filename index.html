@@ -23,22 +23,39 @@
             <a href="#" class="logo">Ferienwohnung Gölemezli</a>
             <nav>
                 <ul class="nav-links">
-                    <li><a href="#hero">Start</a></li>
-                    <li><a href="#apartments">Wohnungen</a></li>
-                    <li><a href="#gallery">Galerie</a></li>
-                    <li><a href="#amenities">Ausstattung</a></li>
-                    <li><a href="#reviews">Bewertungen</a></li>
-                    <li><a href="#location">Lage</a></li>
-                    <li><a href="#booking" class="btn-primary">Buchen</a></li>
+                    <li><a href="#hero" data-i18n="nav_home">Start</a></li>
+                    <li><a href="#apartments" data-i18n="nav_apartments">Wohnungen</a></li>
+                    <li><a href="#gallery" data-i18n="nav_gallery">Galerie</a></li>
+                    <li><a href="#amenities" data-i18n="nav_amenities">Ausstattung</a></li>
+                    <li><a href="#reviews" data-i18n="nav_reviews">Bewertungen</a></li>
+                    <li><a href="#location" data-i18n="nav_location">Lage</a></li>
+                    <li><a href="#booking" class="btn-primary" data-i18n="nav_book">Buchen</a></li>
                 </ul>
-                <button id="themeToggle" class="theme-toggle" aria-label="Dark Mode umschalten">
-                    ☀/🌙
-                </button>
-                <button class="mobile-menu-toggle" aria-label="Menü öffnen">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
+                <div class="nav-controls" style="display:flex; align-items:center;">
+                    <select id="languageSelect" class="lang-select"
+                        style="margin-right:10px; padding:5px; border-radius:5px; border:1px solid #ddd;">
+                        <option value="de">🇩🇪 DE</option>
+                        <option value="en">🇺🇸 EN</option>
+                        <option value="tr">🇹🇷 TR</option>
+                        <option value="ru">🇷🇺 RU</option>
+                        <option value="fr">🇫🇷 FR</option>
+                        <option value="es">🇪🇸 ES</option>
+                        <option value="it">🇮🇹 IT</option>
+                        <option value="pl">🇵🇱 PL</option>
+                        <option value="nl">🇳🇱 NL</option>
+                        <option value="vn">🇻🇳 VN</option>
+                        <option value="ja">🇯🇵 JA</option>
+                        <option value="zh">🇨🇳 ZH</option>
+                    </select>
+                    <button id="themeToggle" class="theme-toggle" aria-label="Dark Mode umschalten">
+                        ☀/🌙
+                    </button>
+                    <button class="mobile-menu-toggle" aria-label="Menü öffnen">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
             </nav>
         </div>
     </header>
@@ -46,9 +63,9 @@
     <!-- Hero Section -->
     <section id="hero" class="hero">
         <div class="hero-content">
-            <h1>Willkommen in der <br> Ferienwohnung Gölemezli</h1>
-            <p>Ihr modernes Zuhause in Weißenburg. Entspannen Sie in stilvollem Ambiente.</p>
-            <a href="#booking" class="btn-primary">Jetzt Aufenthalt anfragen</a>
+            <h1 data-i18n="hero_title">Willkommen in der <br> Ferienwohnung Gölemezli</h1>
+            <p data-i18n="hero_subtitle">Ihr modernes Zuhause in Weißenburg. Entspannen Sie in stilvollem Ambiente.</p>
+            <a href="#booking" class="btn-primary" data-i18n="hero_cta">Jetzt Aufenthalt anfragen</a>
         </div>
     </section>
 
@@ -56,26 +73,28 @@
     <section id="apartments" class="section">
         <div class="container">
             <div class="section-header">
-                <h2>Unsere Wohnungen</h2>
-                <p>Wählen Sie Ihr perfektes Urlaubsdomizil in der Nördlinger Straße.</p>
+                <h2 data-i18n="apt_title">Unsere Wohnungen</h2>
+                <p data-i18n="apt_subtitle">Wählen Sie Ihr perfektes Urlaubsdomizil in der Nördlinger Straße.</p>
             </div>
 
             <!-- Wohnung 15 -->
             <div class="apartment-block" id="apt15">
                 <div class="apartment-content">
                     <h3>Nördlinger Str. 15</h3>
-                    <p class="subtitle">1. Obergeschoss • 98 m² • Bis zu 3 Personen</p>
-                    <p>Herzlich Willkommen in unserer gemütlich eingerichteten Ferienwohnung. Genießen Sie Ihren
+                    <p class="subtitle" data-i18n="apt15_meta">1. Obergeschoss • 98 m² • Bis zu 3 Personen</p>
+                    <p data-i18n="apt15_desc1">Herzlich Willkommen in unserer gemütlich eingerichteten Ferienwohnung.
+                        Genießen Sie Ihren
                         Aufenthalt in unserem schönen Weißenburg. Unsere großzügig geschnittene und neu renovierte
                         Wohnung im 1. OG bietet auf 98 m² viel Platz für Entfaltung.</p>
-                    <p>Die Wohnung verfügt über <strong>2 separate Schlafräume</strong>, ein geräumiges Wohnzimmer mit
+                    <p data-i18n="apt15_desc2">Die Wohnung verfügt über <strong>2 separate Schlafräume</strong>, ein
+                        geräumiges Wohnzimmer mit
                         <strong>Kamin</strong> für gemütliche Abende sowie einen <strong>Balkon</strong>.
                     </p>
                     <ul class="apt-features">
-                        <li>Komplett ausgestattete Küche (Backofen, Mikrowelle)</li>
-                        <li>Bad mit Fenster & separates WC</li>
-                        <li>WLAN, Smart-TV & Waschmaschine</li>
-                        <li>Haustiere erlaubt</li>
+                        <li data-i18n="feat_kitchen">Komplett ausgestattete Küche (Backofen, Mikrowelle)</li>
+                        <li data-i18n="feat_bath">Bad mit Fenster & separates WC</li>
+                        <li data-i18n="feat_tech">WLAN, Smart-TV & Waschmaschine</li>
+                        <li data-i18n="feat_pets">Haustiere erlaubt</li>
                     </ul>
                 </div>
                 <div class="apartment-img">
@@ -90,14 +109,16 @@
             <div class="apartment-block reverse" id="apt13">
                 <div class="apartment-content">
                     <h3>Nördlinger Str. 13</h3>
-                    <p class="subtitle">Gemütlich & Zentral</p>
-                    <p>Unsere Wohnung in der Nördlinger Str. 13 wird derzeit für Sie fertiggestellt. Sie erwartet der
+                    <p class="subtitle" data-i18n="apt13_meta">Gemütlich & Zentral</p>
+                    <p data-i18n="apt13_desc">Unsere Wohnung in der Nördlinger Str. 13 wird derzeit für Sie
+                        fertiggestellt. Sie erwartet der
                         gleiche hohe Standard und Komfort, den Sie von uns gewohnt sind. Zentral gelegen und mit allem
                         ausgestattet, was Sie für einen entspannten Aufenthalt benötigen.</p>
                 </div>
                 <div class="apartment-img">
                     <div class="img-placeholder"
-                        style="background-color: #bdc3c7; height: 300px; display:flex; align-items:center; justify-content:center; color:#2c3e50; font-weight:bold; font-size:1.2rem; border-radius:10px;">
+                        style="background-color: #bdc3c7; height: 300px; display:flex; align-items:center; justify-content:center; color:#2c3e50; font-weight:bold; font-size:1.2rem; border-radius:10px;"
+                        data-i18n="apt13_placeholder">
                         Wohnung 13 (Bilder folgen)
                     </div>
                 </div>
@@ -109,18 +130,18 @@
     <section id="amenities" class="section bg-light">
         <div class="container">
             <div class="section-header">
-                <h2>Ausstattung & Komfort</h2>
-                <p>Es soll Ihnen an nichts fehlen.</p>
+                <h2 data-i18n="amenities_title">Ausstattung & Komfort</h2>
+                <p data-i18n="amenities_subtitle">Es soll Ihnen an nichts fehlen.</p>
             </div>
             <ul class="amenities-list">
-                <li><span>Kamin / Kachelofen</span></li>
-                <li><span>Balkon / Terrasse</span></li>
-                <li><span>Volle Küche (Separat)</span></li>
-                <li><span>WLAN & Internet-TV</span></li>
-                <li><span>Waschmaschine</span></li>
-                <li><span>Bad + Sep. WC</span></li>
-                <li><span>Parkplatz</span></li>
-                <li><span>Haustiere erlaubt</span></li>
+                <li><span data-i18n="am_fireplace">Kamin / Kachelofen</span></li>
+                <li><span data-i18n="am_balcony">Balkon / Terrasse</span></li>
+                <li><span data-i18n="am_kitchen">Volle Küche (Separat)</span></li>
+                <li><span data-i18n="am_wifi">WLAN & Internet-TV</span></li>
+                <li><span data-i18n="am_washer">Waschmaschine</span></li>
+                <li><span data-i18n="am_bath">Bad + Sep. WC</span></li>
+                <li><span data-i18n="am_parking">Parkplatz</span></li>
+                <li><span data-i18n="am_pets">Haustiere erlaubt</span></li>
             </ul>
         </div>
     </section>
@@ -129,8 +150,8 @@
     <section id="gallery" class="section">
         <div class="container">
             <div class="section-header">
-                <h2>Galerie</h2>
-                <p>Einblicke in Ihr Urlaubsdomizil.</p>
+                <h2 data-i18n="gallery_title">Galerie</h2>
+                <p data-i18n="gallery_subtitle">Einblicke in Ihr Urlaubsdomizil.</p>
             </div>
             <div class="gallery-grid">
                 <div class="gallery-item"><img src="img/gallery_1.png" alt="Impression 1"></div>
@@ -148,10 +169,11 @@
     <section id="reviews" class="section bg-light">
         <div class="container">
             <div class="section-header">
-                <h2>Das sagen unsere Gäste</h2>
+                <h2 data-i18n="reviews_title">Das sagen unsere Gäste</h2>
                 <div class="google-rating">
                     <div class="review-stars">★★★★★</div>
-                    <p class="review-text">"Sehr netter Kontakt und unkomplizierte Abwicklung. Die Wohnung hat alles was
+                    <p class="review-text" data-i18n="reviews_summary">"Sehr netter Kontakt und unkomplizierte
+                        Abwicklung. Die Wohnung hat alles was
                         man braucht."</p>
                 </div>
             </div>
@@ -211,8 +233,8 @@
     <section id="location" class="section">
         <div class="container">
             <div class="section-header">
-                <h2>Lage & Umgebung</h2>
-                <p>Weißenburg in Bayern entdecken.</p>
+                <h2 data-i18n="location_title">Lage & Umgebung</h2>
+                <p data-i18n="location_subtitle">Weißenburg in Bayern entdecken.</p>
             </div>
             <div class="location-content">
                 <div class="map-placeholder"
@@ -221,21 +243,25 @@
                         src="https://maps.google.com/maps?q=N%C3%B6rdlinger+Str.+15,+91781+Wei%C3%9Fenburg+in+Bayern&t=&z=15&ie=UTF8&iwloc=&output=embed"></iframe>
                 </div>
                 <div class="location-info">
-                    <h3>Historisches Flair & Moderne</h3>
-                    <p>Unsere Wohnung liegt direkt in der Nördlinger Straße, nur wenige Schritte von der historischen
+                    <h3 data-i18n="loc_info_title">Historisches Flair & Moderne</h3>
+                    <p data-i18n="loc_info_desc">Unsere Wohnung liegt direkt in der Nördlinger Straße, nur wenige
+                        Schritte von der historischen
                         Altstadt entfernt.</p>
 
-                    <h4 style="margin-top:20px;">Sehenswürdigkeiten</h2>
-                        <ul style="list-style: disc; margin-left: 20px; margin-bottom: 20px;">
-                            <li><strong>Römermuseum & Limes-Infozentrum:</strong> Tauchen Sie ein in die römische
-                                Geschichte.</li>
-                            <li><strong>Ellinger Tor:</strong> Eines der schönsten Stadttore Bayerns.</li>
-                            <li><strong>Wülzburg:</strong> Imposante Festung mit tollem Ausblick.</li>
-                        </ul>
+                    <h4 style="margin-top:20px;" data-i18n="loc_sights_title">Sehenswürdigkeiten</h4>
+                    <ul style="list-style: disc; margin-left: 20px; margin-bottom: 20px;">
+                        <li><strong data-i18n="sight1_title">Römermuseum & Limes-Infozentrum:</strong> <span
+                                data-i18n="sight1_desc">Tauchen Sie ein in die römische Geschichte.</span></li>
+                        <li><strong data-i18n="sight2_title">Ellinger Tor:</strong> <span data-i18n="sight2_desc">Eines
+                                der schönsten Stadttore Bayerns.</span></li>
+                        <li><strong data-i18n="sight3_title">Wülzburg:</strong> <span data-i18n="sight3_desc">Imposante
+                                Festung mit tollem Ausblick.</span></li>
+                    </ul>
 
-                        <h4>Einkaufen & Genuss</h4>
-                        <p>Direkt in der Umgebung finden Sie zahlreiche Einkaufsmöglichkeiten, Cafés und Restaurants.
-                            Supermärkte für den täglichen Bedarf sind ebenfalls schnell erreichbar.</p>
+                    <h4 data-i18n="loc_shopping_title">Einkaufen & Genuss</h4>
+                    <p data-i18n="loc_shopping_desc">Direkt in der Umgebung finden Sie zahlreiche Einkaufsmöglichkeiten,
+                        Cafés und Restaurants.
+                        Supermärkte für den täglichen Bedarf sind ebenfalls schnell erreichbar.</p>
                 </div>
             </div>
         </div>
@@ -245,8 +271,8 @@
     <section id="booking" class="section bg-light">
         <div class="container">
             <div class="section-header">
-                <h2>Verfügbarkeit & Buchung</h2>
-                <p>Wählen Sie Ihren Reisezeitraum.</p>
+                <h2 data-i18n="booking_title">Verfügbarkeit & Buchung</h2>
+                <p data-i18n="booking_subtitle">Wählen Sie Ihren Reisezeitraum.</p>
             </div>
 
             <div class="booking-container">
@@ -261,19 +287,22 @@
                         <!-- Days generated by JS -->
                     </div>
                     <div class="calendar-legend">
-                        <span class="legend-item"><span class="dot free"></span> Frei</span>
-                        <span class="legend-item"><span class="dot booked"></span> Belegt</span>
-                        <span class="legend-item"><span class="dot selected"></span> Ihre Auswahl</span>
+                        <span class="legend-item"><span class="dot free"></span> <span
+                                data-i18n="legend_free">Frei</span></span>
+                        <span class="legend-item"><span class="dot booked"></span> <span
+                                data-i18n="legend_booked">Belegt</span></span>
+                        <span class="legend-item"><span class="dot selected"></span> <span
+                                data-i18n="legend_selected">Ihre Auswahl</span></span>
                     </div>
                 </div>
 
                 <!-- Buchungs-Zusammenfassung -->
                 <div class="booking-summary card">
-                    <h3>Ihre Buchung</h3>
+                    <h3 data-i18n="booking_summary_title">Ihre Buchung</h3>
 
                     <div class="booking-options" style="margin-bottom: 20px;">
                         <div class="form-group-small">
-                            <label for="apartmentSelect">Wohnung wählen:</label>
+                            <label for="apartmentSelect" data-i18n="label_apartment">Wohnung wählen:</label>
                             <select id="apartmentSelect"
                                 style="width:100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
                                 <option value="15">Nördlinger Str. 15</option>
@@ -281,7 +310,7 @@
                             </select>
                         </div>
                         <div class="form-group-small" style="margin-top:10px;">
-                            <label for="guestCount">Personen:</label>
+                            <label for="guestCount" data-i18n="label_guests">Personen:</label>
                             <input type="number" id="guestCount" value="2" min="1" max="6"
                                 style="width:100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
                         </div>
@@ -290,24 +319,25 @@
                     <div class="summary-details">
                         <div class="dates">
                             <div class="date-box">
-                                <label>Check-in</label>
+                                <label data-i18n="label_checkin">Check-in</label>
                                 <span id="checkinDate">-</span>
                             </div>
                             <div class="date-box">
-                                <label>Check-out</label>
+                                <label data-i18n="label_checkout">Check-out</label>
                                 <span id="checkoutDate">-</span>
                             </div>
                         </div>
                         <div class="price-calc" id="priceCalc">
-                            <p>Wählen Sie Reisedaten für die Preisberechnung</p>
+                            <p data-i18n="msg_select_dates">Wählen Sie Reisedaten für die Preisberechnung</p>
                         </div>
                         <div class="total-price" id="totalPrice" style="display:none;">
-                            <span>Gesamt</span>
+                            <span data-i18n="label_total">Gesamt</span>
                             <span id="totalDisplay">0 €</span>
                         </div>
                     </div>
-                    <button id="bookBtn" class="btn-primary" disabled>Jetzt buchen</button>
-                    <p class="note-text">45€ pro Person / Nacht.<br>Zahlung per Überweisung.</p>
+                    <button id="bookBtn" class="btn-primary" disabled data-i18n="btn_book_now">Jetzt buchen</button>
+                    <p class="note-text" data-i18n="booking_note">45€ pro Person / Nacht.<br>Zahlung per Überweisung.
+                    </p>
                 </div>
             </div>
 
@@ -315,28 +345,32 @@
             <div id="bookingFormContainer" class="modal" style="display:none;">
                 <div class="modal-content">
                     <span class="close-modal">&times;</span>
-                    <h3>Buchung abschließen</h3>
-                    <p>Bitte geben Sie Ihre Daten ein, um die Reservierungsanfrage zu senden.</p>
+                    <h3 data-i18n="modal_title">Buchung abschließen</h3>
+                    <p data-i18n="modal_subtitle">Bitte geben Sie Ihre Daten ein, um die Reservierungsanfrage zu senden.
+                    </p>
                     <form class="booking-form" id="finalBookingForm">
                         <div class="form-group">
-                            <label for="guestName">Name</label>
+                            <label for="guestName" data-i18n="label_name">Name</label>
                             <input type="text" id="guestName" required>
                         </div>
                         <div class="form-group">
-                            <label for="guestEmail">E-Mail</label>
+                            <label for="guestEmail" data-i18n="label_email">E-Mail</label>
                             <input type="email" id="guestEmail" required>
                         </div>
                         <div class="form-group">
-                            <label for="guestPhone">Telefon</label>
+                            <label for="guestPhone" data-i18n="label_phone">Telefon</label>
                             <input type="tel" id="guestPhone" required>
                         </div>
                         <div id="bankDetails" class="success-message" style="display:none;">
-                            <p><strong>Vielen Dank!</strong><br>Ihre Anfrage wurde gesendet. Wir melden uns in Kürze bei
-                                Ihnen.</p>
+                            <p><strong data-i18n="success_title">Vielen Dank!</strong><br><span
+                                    data-i18n="success_msg">Ihre Anfrage wurde gesendet. Wir melden uns in Kürze bei
+                                    Ihnen.</span></p>
                         </div>
                         <button type="submit" id="submitBookingBtn" class="btn-primary"
-                            style="width:100%; margin-top:20px;">Jetzt unverbindlich anfragen</button>
-                        <p style="font-size:0.75rem; color:#888; margin-top:10px; text-align:center;">
+                            style="width:100%; margin-top:20px;" data-i18n="btn_submit_request">Jetzt unverbindlich
+                            anfragen</button>
+                        <p style="font-size:0.75rem; color:#888; margin-top:10px; text-align:center;"
+                            data-i18n="disclaimer">
                             Hinweis: Ihre Anfrage ist zunächst unverbindlich. Wir melden uns danach bei Ihnen.
                         </p>
                     </form>
@@ -348,14 +382,14 @@
     <!-- Footer -->
     <footer>
         <div class="container">
-            <p>&copy; 2024 Ferienwohnung Gölemezli. Alle Rechte vorbehalten.</p>
+            <p data-i18n="footer_copyright">&copy; 2024 Ferienwohnung Gölemezli. Alle Rechte vorbehalten.</p>
             <div style="font-size: 0.9em; margin-top: 10px; color: #ccc;">
                 <p>Nördlinger Str. 13 & 15, 91781 Weißenburg in Bayern</p>
                 <p>Tel: +49 160 123 1907 | Email: wohlfühlhomewug@hotmail.com</p>
             </div>
             <ul class="footer-links" style="margin-top: 20px;">
-                <li><a href="#">Impressum</a></li>
-                <li><a href="#">Datenschutz</a></li>
+                <li><a href="#" data-i18n="footer_impressum">Impressum</a></li>
+                <li><a href="#" data-i18n="footer_privacy">Datenschutz</a></li>
             </ul>
         </div>
     </footer>

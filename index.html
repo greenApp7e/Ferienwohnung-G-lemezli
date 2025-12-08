@@ -309,23 +309,23 @@
                         <div class="dates">
                             <div class="date-box">
                                 <label data-i18n="label_checkin">Check-in</label>
-                                <span id="checkinDate">-</span>
+                                <span id="summaryCheckin">-</span>
                             </div>
                             <div class="date-box">
                                 <label data-i18n="label_checkout">Check-out</label>
-                                <span id="checkoutDate">-</span>
+                                <span id="summaryCheckout">-</span>
                             </div>
                         </div>
                         <div class="price-calc" id="priceCalc">
-                            <p data-i18n="msg_select_dates">Wählen Sie Reisedaten für die
+                            <p id="dateSelectionNote" data-i18n="msg_select_dates">Wählen Sie Reisedaten für die
                                 Preisberechnung</p>
                         </div>
                         <div class="total-price" id="totalPrice" style="display:none;">
                             <span data-i18n="label_total">Gesamt</span>
-                            <span id="totalDisplay">0 €</span>
+                            <span id="summaryTotal">0 €</span>
                         </div>
                     </div>
-                    <button id="bookBtn" class="btn-primary" disabled data-i18n="btn_book_now">Jetzt
+                    <button id="openBookingModal" class="btn-primary" disabled data-i18n="btn_book_now">Jetzt
                         buchen</button>
                     <p class="note-text" data-i18n="booking_note">45€ pro Person / Nacht.<br>Zahlung per
                         Überweisung.
@@ -334,25 +334,25 @@
             </div>
 
             <!-- Hidden Booking Form (Shows after clicking "Book") -->
-            <div id="bookingFormContainer" class="modal" style="display:none;">
+            <div id="bookingModal" class="modal" style="display:none;">
                 <div class="modal-content">
                     <span class="close-modal">&times;</span>
                     <h3 data-i18n="modal_title">Buchung abschließen</h3>
                     <p data-i18n="modal_subtitle">Bitte geben Sie Ihre Daten ein, um die
                         Reservierungsanfrage zu senden.
                     </p>
-                    <form class="booking-form" id="finalBookingForm">
+                    <form class="booking-form" id="bookingForm">
                         <div class="form-group">
-                            <label for="guestName" data-i18n="label_name">Name</label>
-                            <input type="text" id="guestName" required>
+                            <label for="b_name" data-i18n="label_name">Name</label>
+                            <input type="text" id="b_name" required>
                         </div>
                         <div class="form-group">
-                            <label for="guestEmail" data-i18n="label_email">E-Mail</label>
-                            <input type="email" id="guestEmail" required>
+                            <label for="b_email" data-i18n="label_email">E-Mail</label>
+                            <input type="email" id="b_email" required>
                         </div>
                         <div class="form-group">
-                            <label for="guestPhone" data-i18n="label_phone">Telefon</label>
-                            <input type="tel" id="guestPhone" required>
+                            <label for="b_phone" data-i18n="label_phone">Telefon</label>
+                            <input type="tel" id="b_phone" required>
                         </div>
                         <div id="bankDetails" class="success-message" style="display:none;">
                             <p><strong data-i18n="success_title">Vielen Dank!</strong><br><span
